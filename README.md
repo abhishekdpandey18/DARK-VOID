@@ -98,7 +98,7 @@ Linux builds of DaVinci Resolve (especially DaVinci Resolve Free on Linux) do no
 ### Automated Installation (Recommended for Kali / Debian)
 
 ```
-git clone <repository-url> DARK-VOID
+git clone https://github.com/abhishekdpandey18/DARK-VOID DARK-VOID
 cd DARK-VOID
 ./scripts/install.sh
 
