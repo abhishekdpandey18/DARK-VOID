@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "darkvoid"
+version = "1.0.0"
+description = "Professional Python CLI Video Conversion Engine for DaVinci Resolve DNxHR HQ QuickTime MOV workflows."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "UNRESOLVED - See LICENSE file"}
+keywords = ["ffmpeg", "ffprobe", "dnxhr", "davinci-resolve", "video-converter", "cli", "linux", "kali"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video :: Conversion",
+]
+dependencies = [
+    "click>=8.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "typer>=0.9.0",
+    "pyfiglet>=1.0.2",
+    "watchdog>=3.0.0",
+]
+dev = [
+    "pytest>=7.4.0",
+]
+
+[project.scripts]
+darkvoid = "darkvoid.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["darkvoid*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"

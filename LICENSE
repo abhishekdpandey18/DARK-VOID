@@ -1,0 +1,9 @@
+LICENSE STATUS: PENDING OWNER CONFIRMATION
+
+Per open-source engineering standards, no copyright owner or license grant has been
+fabricated without explicit repository owner confirmation.
+
+To finalize licensing before publishing to GitHub:
+1. Choose your preferred open-source license (e.g., MIT License, Apache-2.0, or GPL-3.0).
+2. Replace this file with the selected license text and your confirmed copyright holder name and year.
+3. Update the `license` field in `pyproject.toml` accordingly.
