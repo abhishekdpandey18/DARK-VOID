@@ -1,4 +1,4 @@
-"""FFmpeg command construction, process management, real-time progress parsing, and cancellation."""
+"""FFmpeg command construction, multi-threaded DNxHR HQ optimization, progress parsing, and cancellation."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def build_ffmpeg_command(
     metadata: MediaMetadata,
     ffmpeg_bin: str = "ffmpeg",
 ) -> list[str]:
-    """Construct the mandatory DNxHR HQ QuickTime MOV FFmpeg command as an argument list.
+    """Construct the mandatory DNxHR HQ QuickTime MOV FFmpeg command with multi-core thread optimization.
 
     Baseline specification:
         ffmpeg -i INPUT -c:v dnxhd -profile:v dnxhr_hq -c:a pcm_s16le OUTPUT
@@ -60,6 +60,8 @@ def build_ffmpeg_command(
         "error",
         "-progress",
         "pipe:1",
+        "-threads",
+        "0",
         "-i",
         str(input_path.resolve()),
         "-map",
@@ -77,7 +79,7 @@ def build_ffmpeg_command(
     else:
         cmd.append("-an")
 
-    cmd.extend(["-f", "mov", str(output_path.resolve())])
+    cmd.extend(["-movflags", "+faststart", "-f", "mov", str(output_path.resolve())])
     return cmd
 
 

@@ -1,4 +1,4 @@
-"""SQLite connection management, schema initialization, and corruption recovery."""
+"""SQLite connection management, WAL optimization, schema initialization, and corruption recovery."""
 
 from __future__ import annotations
 
@@ -13,6 +13,9 @@ from typing import Iterator
 logger = logging.getLogger("darkvoid.database")
 
 SCHEMA_SQL = """
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+
 CREATE TABLE IF NOT EXISTS conversion_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id TEXT NOT NULL,
@@ -57,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_queue_status ON conversion_queue(status);
 
 
 class DatabaseManager:
-    """Manages SQLite connections, transactions, and graceful corruption recovery."""
+    """Manages SQLite connections, WAL mode performance, transactions, and corruption recovery."""
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = Path(db_path).expanduser().resolve()

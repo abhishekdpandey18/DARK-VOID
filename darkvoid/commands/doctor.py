@@ -18,6 +18,7 @@ from rich.table import Table
 
 from darkvoid.utils.formatting import format_size
 from darkvoid.utils.paths import ConfigManager
+from darkvoid.utils.validation import resolve_executable_path
 
 
 def execute_doctor_command(
@@ -41,7 +42,7 @@ def execute_doctor_command(
         "details": f"Python {py_ver} ({sys.executable})",
     })
 
-    ffmpeg_bin = shutil.which(cfg.ffmpeg_path)
+    ffmpeg_bin = resolve_executable_path(cfg.ffmpeg_path)
     ffmpeg_ok = ffmpeg_bin is not None
     if not ffmpeg_ok:
         all_critical_ok = False
@@ -51,7 +52,7 @@ def execute_doctor_command(
         "details": ffmpeg_bin or f"Not found: '{cfg.ffmpeg_path}'",
     })
 
-    ffprobe_bin = shutil.which(cfg.ffprobe_path)
+    ffprobe_bin = resolve_executable_path(cfg.ffprobe_path)
     ffprobe_ok = ffprobe_bin is not None
     if not ffprobe_ok:
         all_critical_ok = False

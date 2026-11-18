@@ -1,9 +1,10 @@
-"""Security and input validation utilities for DARK VOID."""
+"""Security and cross-platform input/executable validation utilities for DARK VOID."""
 
 from __future__ import annotations
 
 import os
 import shutil
+import sys
 from pathlib import Path
 
 SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({".mp4", ".mov", ".mkv", ".avi"})
@@ -51,17 +52,51 @@ def validate_input_file(path: Path) -> Path:
     return resolved
 
 
+def resolve_executable_path(executable: str) -> str | None:
+    """Locate an executable (ffmpeg/ffprobe) across Linux, macOS, and Windows (including Winget/Choco/Scoop)."""
+    if "\x00" in executable:
+        return None
+    found = shutil.which(executable)
+    if found:
+        return str(Path(found).resolve())
+
+    cand = Path(executable).expanduser()
+    if cand.is_file() and os.access(cand, os.X_OK):
+        return str(cand.resolve())
+
+    # On Windows, also check .exe extension and common Winget / Scoop / Chocolatey / C:\ffmpeg locations
+    if os.name == "nt" or sys.platform.startswith("win"):
+        exe_name = executable if executable.lower().endswith(".exe") else f"{executable}.exe"
+        cand_exe = Path(exe_name).expanduser()
+        if cand_exe.is_file():
+            return str(cand_exe.resolve())
+
+        win_candidates = [
+            Path("C:/ffmpeg/bin") / exe_name,
+            Path("C:/Program Files/ffmpeg/bin") / exe_name,
+            Path.home() / "scoop" / "shims" / exe_name,
+            Path("C:/ProgramData/chocolatey/bin") / exe_name,
+            Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData/Local")))
+            / "Microsoft"
+            / "WinGet"
+            / "Links"
+            / exe_name,
+        ]
+        for wc in win_candidates:
+            if wc.is_file():
+                return str(wc.resolve())
+
+    return None
+
+
 def validate_executable(executable: str) -> str:
     """Validate that an external binary (ffmpeg/ffprobe) exists and is executable."""
     if "\x00" in executable:
         raise ValidationError("Executable path contains null byte.")
-    found = shutil.which(executable)
-    if not found:
-        cand = Path(executable).expanduser()
-        if cand.is_file() and os.access(cand, os.X_OK):
-            return str(cand.resolve())
+    resolved = resolve_executable_path(executable)
+    if not resolved:
         raise ValidationError(f"Required executable not found or not executable: '{executable}'")
-    return str(Path(found).resolve())
+    return resolved
 
 
 def check_disk_space(target_dir: Path, required_bytes: int) -> tuple[bool, int]:

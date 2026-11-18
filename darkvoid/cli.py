@@ -1,8 +1,4 @@
-"""Primary CLI entry point for DARK VOID (`darkvoid`).
-
-Uses Click (the engine underlying Typer) with optional Typer compatibility so the CLI
-executes identically whether invoked via `darkvoid`, `python3 -m darkvoid.cli`, or Typer.
-"""
+"""Primary CLI entry point for DARK VOID (`darkvoid`) with fast lazy-loaded subcommands."""
 
 from __future__ import annotations
 
@@ -12,17 +8,7 @@ from typing import Sequence
 
 import click
 
-from darkvoid import __app_name__, __description__, __version__
-from darkvoid.banner import display_banner
-from darkvoid.commands.config import execute_config_reset, execute_config_set, execute_config_show
-from darkvoid.commands.convert import execute_convert_command
-from darkvoid.commands.doctor import execute_doctor_command
-from darkvoid.commands.history import execute_history_command
-from darkvoid.commands.info import execute_info_command
-from darkvoid.commands.logs import execute_logs_command
-from darkvoid.commands.queue import execute_queue_clear, execute_queue_list, execute_queue_retry
-from darkvoid.commands.watch import execute_watch_command
-from darkvoid.menu import run_interactive_menu
+from darkvoid import __app_name__, __version__
 from darkvoid.ui.console import get_console
 from darkvoid.utils.paths import ConfigManager, setup_logging
 
@@ -53,19 +39,20 @@ class DarkVoidContext:
 @click.pass_context
 def cli(ctx: click.Context, version: bool, no_banner: bool, verbose: bool, quiet: bool) -> None:
     """DARK VOID root command group."""
+    if version:
+        click.echo(f"{__app_name__} version {__version__}")
+        ctx.exit(0)
+
     dv_ctx = DarkVoidContext(no_banner=no_banner, verbose=verbose, quiet=quiet)
     ctx.obj = dv_ctx
-    logger = logging.getLogger("darkvoid")
-    logger.info("DARK VOID v%s started (subcommand=%s)", __version__, ctx.invoked_subcommand)
-
-    if version:
-        dv_ctx.console.print(f"{__app_name__} version {__version__}")
-        ctx.exit(0)
+    logging.getLogger("darkvoid").info("DARK VOID v%s started (subcommand=%s)", __version__, ctx.invoked_subcommand)
 
     if ctx.invoked_subcommand is None:
         if not no_banner and not quiet:
+            from darkvoid.banner import display_banner
             display_banner(dv_ctx.console, dv_ctx.config)
         if dv_ctx.console.is_terminal and not quiet:
+            from darkvoid.menu import run_interactive_menu
             code = run_interactive_menu(dv_ctx.config_mgr, dv_ctx.console)
             ctx.exit(code)
         else:
@@ -74,7 +61,7 @@ def cli(ctx: click.Context, version: bool, no_banner: bool, verbose: bool, quiet
 
 
 @cli.command("convert", help="Convert one or more video files or directories to DNxHR HQ QuickTime MOV.")
-@click.argument("inputs", nargs=-1, required=True, type=click.Path( exists=False))
+@click.argument("inputs", nargs=-1, required=True, type=click.Path(exists=False))
 @click.option("--output", "-o", "output_dir", type=click.Path(), default=None, help="Output directory for converted .mov files.")
 @click.option("--recursive", "-r", is_flag=True, help="Recursively scan subdirectories for supported videos.")
 @click.option(
@@ -99,7 +86,9 @@ def convert_cmd(
 ) -> None:
     """Convert videos into DaVinci Resolve DNxHR HQ MOV format."""
     if not dv_ctx.no_banner and not dv_ctx.quiet and not json_output:
+        from darkvoid.banner import display_banner
         display_banner(dv_ctx.console, dv_ctx.config)
+    from darkvoid.commands.convert import execute_convert_command
     code = execute_convert_command(
         inputs=inputs,
         config=dv_ctx.config,
@@ -120,6 +109,7 @@ def convert_cmd(
 @click.pass_obj
 def info_cmd(dv_ctx: DarkVoidContext, video: str, json_output: bool) -> None:
     """Inspect a media file via FFprobe."""
+    from darkvoid.commands.info import execute_info_command
     code = execute_info_command(video, dv_ctx.config, dv_ctx.console, json_output=json_output)
     sys.exit(code)
 
@@ -132,6 +122,7 @@ def queue_group(ctx: click.Context, status: str | None, json_output: bool) -> No
     """Display queued and active conversion jobs when invoked without subcommand."""
     dv_ctx: DarkVoidContext = ctx.obj
     if ctx.invoked_subcommand is None:
+        from darkvoid.commands.queue import execute_queue_list
         code = execute_queue_list(dv_ctx.config, dv_ctx.console, status=status, json_output=json_output)
         ctx.exit(code)
 
@@ -140,6 +131,7 @@ def queue_group(ctx: click.Context, status: str | None, json_output: bool) -> No
 @click.option("--yes", "-y", is_flag=True, help="Confirm clearing pending jobs without interactive prompt.")
 @click.pass_obj
 def queue_clear_cmd(dv_ctx: DarkVoidContext, yes: bool) -> None:
+    from darkvoid.commands.queue import execute_queue_clear
     code = execute_queue_clear(dv_ctx.config, dv_ctx.console, yes=yes)
     sys.exit(code)
 
@@ -147,6 +139,7 @@ def queue_clear_cmd(dv_ctx: DarkVoidContext, yes: bool) -> None:
 @queue_group.command("retry", help="Retry eligible failed or cancelled jobs in the queue.")
 @click.pass_obj
 def queue_retry_cmd(dv_ctx: DarkVoidContext) -> None:
+    from darkvoid.commands.queue import execute_queue_retry
     code = execute_queue_retry(dv_ctx.config, dv_ctx.console)
     sys.exit(code)
 
@@ -158,7 +151,9 @@ def queue_retry_cmd(dv_ctx: DarkVoidContext) -> None:
 @click.pass_obj
 def watch_cmd(dv_ctx: DarkVoidContext, directory: str | None, output_dir: str | None, once: bool) -> None:
     if not dv_ctx.no_banner and not dv_ctx.quiet:
+        from darkvoid.banner import display_banner
         display_banner(dv_ctx.console, dv_ctx.config)
+    from darkvoid.commands.watch import execute_watch_command
     code = execute_watch_command(directory, dv_ctx.config, dv_ctx.console, output_dir=output_dir, once=once)
     sys.exit(code)
 
@@ -178,6 +173,7 @@ def history_cmd(
     limit: int,
     json_output: bool,
 ) -> None:
+    from darkvoid.commands.history import execute_history_command
     code = execute_history_command(
         dv_ctx.config,
         dv_ctx.console,
@@ -195,6 +191,7 @@ def history_cmd(
 def config_group(ctx: click.Context) -> None:
     dv_ctx: DarkVoidContext = ctx.obj
     if ctx.invoked_subcommand is None:
+        from darkvoid.commands.config import execute_config_show
         code = execute_config_show(dv_ctx.config_mgr, dv_ctx.console)
         ctx.exit(code)
 
@@ -203,6 +200,7 @@ def config_group(ctx: click.Context) -> None:
 @click.option("--json", "json_output", is_flag=True, help="Emit configuration as JSON.")
 @click.pass_obj
 def config_show_cmd(dv_ctx: DarkVoidContext, json_output: bool) -> None:
+    from darkvoid.commands.config import execute_config_show
     code = execute_config_show(dv_ctx.config_mgr, dv_ctx.console, json_output=json_output)
     sys.exit(code)
 
@@ -212,6 +210,7 @@ def config_show_cmd(dv_ctx: DarkVoidContext, json_output: bool) -> None:
 @click.argument("value")
 @click.pass_obj
 def config_set_cmd(dv_ctx: DarkVoidContext, key: str, value: str) -> None:
+    from darkvoid.commands.config import execute_config_set
     code = execute_config_set(dv_ctx.config_mgr, key, value, dv_ctx.console)
     sys.exit(code)
 
@@ -219,6 +218,7 @@ def config_set_cmd(dv_ctx: DarkVoidContext, key: str, value: str) -> None:
 @config_group.command("reset", help="Restore default configuration settings.")
 @click.pass_obj
 def config_reset_cmd(dv_ctx: DarkVoidContext) -> None:
+    from darkvoid.commands.config import execute_config_reset
     code = execute_config_reset(dv_ctx.config_mgr, dv_ctx.console)
     sys.exit(code)
 
@@ -227,6 +227,7 @@ def config_reset_cmd(dv_ctx: DarkVoidContext) -> None:
 @click.option("--json", "json_output", is_flag=True, help="Emit diagnostics as JSON.")
 @click.pass_obj
 def doctor_cmd(dv_ctx: DarkVoidContext, json_output: bool) -> None:
+    from darkvoid.commands.doctor import execute_doctor_command
     code = execute_doctor_command(dv_ctx.config_mgr, dv_ctx.console, json_output=json_output)
     sys.exit(code)
 
@@ -237,6 +238,7 @@ def doctor_cmd(dv_ctx: DarkVoidContext, json_output: bool) -> None:
 @click.option("--search", "-q", default=None, help="Filter logs by keyword.")
 @click.pass_obj
 def logs_cmd(dv_ctx: DarkVoidContext, lines: int, level: str | None, search: str | None) -> None:
+    from darkvoid.commands.logs import execute_logs_command
     code = execute_logs_command(dv_ctx.config, dv_ctx.console, lines=lines, level=level, search=search)
     sys.exit(code)
 

@@ -1,21 +1,32 @@
-"""Path management, configuration storage, and logging setup for DARK VOID."""
+"""Path management, cross-platform configuration storage (Linux/Windows/macOS), and logging setup."""
 
 from __future__ import annotations
 
 import json
 import logging
 import os
+import sys
 from dataclasses import asdict, dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
 
+def is_windows() -> bool:
+    """Return True when running on Windows."""
+    return os.name == "nt" or sys.platform.startswith("win")
+
+
 def get_config_dir() -> Path:
-    """Return user configuration directory respecting XDG_CONFIG_HOME or DARKVOID_HOME."""
+    """Return user configuration directory across Linux, Windows, and macOS."""
     env_home = os.environ.get("DARKVOID_HOME")
     if env_home:
         return Path(env_home).expanduser().resolve()
+    if is_windows():
+        appdata = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+        if appdata:
+            return Path(appdata).expanduser().resolve() / "darkvoid"
+        return Path.home() / "AppData" / "Roaming" / "darkvoid"
     xdg = os.environ.get("XDG_CONFIG_HOME")
     if xdg:
         return Path(xdg).expanduser().resolve() / "darkvoid"
@@ -152,7 +163,7 @@ class ConfigManager:
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self.config_file.with_suffix(".json.tmp")
         tmp_path.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
-        tmp_path.replace(self.config_file)
+        os.replace(str(tmp_path), str(self.config_file))
         return self.config_file
 
     def set_value(self, key: str, value: str) -> AppConfig:

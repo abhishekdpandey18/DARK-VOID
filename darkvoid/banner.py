@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import platform
-import shutil
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
@@ -11,6 +10,7 @@ from rich.text import Text
 
 from darkvoid import __version__
 from darkvoid.utils.paths import AppConfig
+from darkvoid.utils.validation import resolve_executable_path
 
 try:
     import pyfiglet  # type: ignore[import-not-found]
@@ -47,8 +47,8 @@ def display_banner(console: Console, config: AppConfig, force: bool = False) -> 
     if not force and not console.is_terminal:
         return
 
-    ffmpeg_ok = shutil.which(config.ffmpeg_path) is not None
-    ffprobe_ok = shutil.which(config.ffprobe_path) is not None
+    ffmpeg_ok = resolve_executable_path(config.ffmpeg_path) is not None
+    ffprobe_ok = resolve_executable_path(config.ffprobe_path) is not None
     engine_ready = ffmpeg_ok and ffprobe_ok
 
     py_ver = platform.python_version()
